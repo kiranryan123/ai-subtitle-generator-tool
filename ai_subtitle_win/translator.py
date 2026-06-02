@@ -19,13 +19,13 @@ LANGUAGE_NAMES = {
 
 @dataclass(frozen=True)
 class SubtitlePair:
-    original: str
-    translated: str
+    english: str
+    chinese: str
 
     def format(self, show_original: bool = True) -> str:
         if not show_original:
-            return self.translated
-        return f"EN: {self.original}\n中: {self.translated}"
+            return self.chinese
+        return f"EN: {self.english}\n中: {self.chinese}"
 
 
 class DeepSeekTranslator:
@@ -42,11 +42,9 @@ class DeepSeekTranslator:
             base_url=config.deepseek_base_url,
         )
 
-    def translate(self, text: str) -> str:
-        target_language = LANGUAGE_NAMES.get(
-            self._config.target_language.lower(),
-            self._config.target_language,
-        )
+    def translate(self, text: str, target_language: str | None = None) -> str:
+        target = target_language or self._config.target_language
+        target_name = LANGUAGE_NAMES.get(target.lower(), target)
         response = self._client.chat.completions.create(
             model=self._config.deepseek_model,
             messages=[
@@ -60,7 +58,7 @@ class DeepSeekTranslator:
                 },
                 {
                     "role": "user",
-                    "content": f"把下面这句话翻译成{target_language}：\n{text}",
+                    "content": f"把下面这句话翻译成{target_name}：\n{text}",
                 },
             ],
             temperature=0.2,
@@ -70,7 +68,7 @@ class DeepSeekTranslator:
 
 
 class NoopTranslator:
-    def translate(self, text: str) -> str:
+    def translate(self, text: str, target_language: str | None = None) -> str:
         return text
 
 

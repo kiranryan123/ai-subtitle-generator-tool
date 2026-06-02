@@ -13,6 +13,9 @@ from .transcriber import WhisperTranscriber
 from .translator import SubtitlePair, build_translator
 
 
+TRANSLATING_TEXT = "翻译中... / Translating..."
+
+
 def _setup_logging() -> None:
     log_dir = Path.cwd() / "logs"
     log_dir.mkdir(exist_ok=True)
@@ -54,9 +57,17 @@ def _worker(config_path: Path, outbox: queue.Queue[str], stop_flag: threading.Ev
             transcript = transcriber.transcribe(samples)
             if transcript.text:
                 logging.info("Transcript: %s", transcript.text)
-                translated = translator.translate(transcript.text)
+                source_language = (transcript.language or "").lower()
+                source_is_chinese = source_language.startswith("zh")
+                if source_is_chinese:
+                    outbox.put(SubtitlePair(english=TRANSLATING_TEXT, chinese=transcript.text).format())
+                    translated = translator.translate(transcript.text, target_language="en")
+                    subtitle = SubtitlePair(english=translated, chinese=transcript.text)
+                else:
+                    outbox.put(SubtitlePair(english=transcript.text, chinese=TRANSLATING_TEXT).format())
+                    translated = translator.translate(transcript.text, target_language="zh")
+                    subtitle = SubtitlePair(english=transcript.text, chinese=translated)
                 logging.info("Translation completed")
-                subtitle = SubtitlePair(original=transcript.text, translated=translated)
                 outbox.put(subtitle.format(show_original=config.translation.show_original))
     except Exception as exc:
         logging.exception("Worker failed")
