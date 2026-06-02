@@ -15,16 +15,15 @@ TEXT = {
     "show_overlay": ("显示字幕", "Show subtitles"),
     "open_config": ("打开配置", "Config"),
     "view_logs": ("查看日志", "Logs"),
-    "edit_api_key": ("编辑 API Key", "API Key"),
     "quit": ("退出程序", "Quit"),
     "mode": ("当前模式", "Mode"),
     "language": ("界面语言", "UI language"),
     "starting": ("正在启动...", "Starting..."),
     "info": (
-        "系统/app/网页音频 -> Vosk 本地识别 -> DeepSeek 后台翻译\n"
-        "中文输出强制简体；新字幕先显示，译文稍后补上。",
-        "System/app/browser audio -> local Vosk recognition -> DeepSeek background translation\n"
-        "Chinese output is forced to Simplified Chinese. New captions appear first; translations update later.",
+        "系统/app/网页音频 -> Whisper 本地识别 -> 单行字幕显示\n"
+        "中文输出强制简体；不再调用翻译服务。",
+        "System/app/browser audio -> local Whisper recognition -> one-line subtitles\n"
+        "Chinese output is forced to Simplified Chinese. Translation is disabled.",
     ),
 }
 
@@ -138,10 +137,8 @@ class ControlPanel:
 
         row3 = tk.Frame(actions, bg="#1a1f27")
         row3.pack(fill="x", pady=(12, 0))
-        self.api_button = self._button(row3, self._t("edit_api_key"), lambda: self._open(".env"))
-        self.api_button.pack(side="left", fill="x", expand=True, padx=(0, 8))
         self.quit_button = self._button(row3, self._t("quit"), on_quit, danger=True)
-        self.quit_button.pack(side="left", fill="x", expand=True, padx=(8, 0))
+        self.quit_button.pack(fill="x")
 
         info = self._card(shell)
         self.mode_heading = self._label(info, "mode", self._heading_font, "#f4f7fb")
@@ -221,7 +218,6 @@ class ControlPanel:
         self.overlay_button.configure(text=self._t("hide_overlay" if self._overlay_visible else "show_overlay"))
         self.config_button.configure(text=self._t("open_config"))
         self.logs_button.configure(text=self._t("view_logs"))
-        self.api_button.configure(text=self._t("edit_api_key"))
         self.quit_button.configure(text=self._t("quit"))
         self.info_label.configure(text=self._t("info"))
         self.status_label.configure(text=self._status_text(self.status_label.cget("text")))

@@ -1,138 +1,96 @@
 # AI字幕生成工具 / AI Subtitle Generator Tool
 
-Windows real-time AI subtitle MVP for Chinese and English audio.
+Windows real-time subtitle tool for Chinese and English audio.
 
-This prototype shows live captions in a transparent always-on-top overlay. By default it listens to Windows system playback audio through loopback capture, so it is aimed at subtitles for browser tabs, media players, meetings, games, and other apps. Microphone capture is available as a fallback.
+The app listens to system playback audio through Windows loopback capture, recognizes speech locally with `faster-whisper`, and shows one-line subtitles in an always-on-top overlay. It does not call DeepSeek or any online translation service in the current build.
 
 ## Features
 
-- Chinese and English speech recognition
-- Always-on-top transparent subtitle overlay
-- Desktop control panel for status, pause, overlay visibility, config, logs, and API key editing
-- System-audio loopback input by default
-- Microphone fallback input
-- DeepSeek V4 Flash subtitle translation
-- Simple keyboard controls
-- Lightweight local transcription through Vosk
+- Local Chinese and English speech recognition with `faster-whisper`
+- Default system-audio loopback capture for apps, browser tabs, videos, meetings, and games
+- Microphone capture as an optional fallback
+- One-line always-on-top subtitle overlay
+- Simplified Chinese output for Chinese speech
+- Desktop control panel for pause, overlay visibility, config, logs, and UI language
+- Draggable subtitle window that keeps the user's chosen position
 
 ## Quick Start
-
-```powershell
-cd D:\ai-subtitle-win
-python -m venv .venv
-.\.venv\Scripts\Activate.ps1
-pip install -r requirements.txt
-Copy-Item .env.example .env
-# Edit .env and fill DEEPSEEK_API_KEY
-python -m ai_subtitle_win
-```
-
-The portable release includes a small Vosk Chinese model, so no Whisper model download is needed.
-
-For normal use, run:
 
 ```powershell
 cd D:\ai-subtitle-win
 .\run.ps1
 ```
 
-`run.ps1` installs missing dependencies, creates `.env` if needed, asks for `DEEPSEEK_API_KEY` when it is missing, starts the subtitle app through `pythonw.exe`, and then lets the PowerShell window close.
+The first run installs Python dependencies and may download the selected Whisper model. After startup, the PowerShell window closes and the desktop control panel stays open.
 
-After startup, the app opens a desktop control panel. The subtitle overlay stays on top of the screen, while the control panel lets you pause listening, hide/show subtitles, open `config.toml`, view `logs\app.log`, and edit `.env`.
+For a fast and reasonably accurate first test, keep this setting in `config.toml`:
 
-To replace an existing DeepSeek API key:
-
-```powershell
-cd D:\ai-subtitle-win
-.\run.ps1 -UpdateApiKey
+```toml
+[speech]
+model_size = "base"
+beam_size = 1
+compute_type = "int8"
+cpu_threads = 4
+allowed_languages = "zh,en"
+min_language_probability = 0.45
+no_speech_threshold = 0.6
 ```
+
+Use `model_size = "tiny"` if speed matters most. Use `model_size = "small"` if accuracy matters more and the computer is fast enough.
 
 ## Controls
 
 - `Esc`: quit
 - `Ctrl+L`: list audio devices in the terminal
-- `Ctrl+M`: toggle mute/pause listening
-- Drag the subtitle window by holding the left mouse button
+- `Ctrl+M`: pause or resume listening
+- Drag the subtitle window with the left mouse button
 
 ## Config
 
 Edit `config.toml`:
 
-- `source = "loopback"` captions app, webpage, meeting, video, and game audio played by the computer. It will not silently fall back to the microphone. If you want microphone captions, set `source = "microphone"`.
-- `chunk_seconds = 0.35` controls responsiveness. Lower values feel faster but increase CPU usage.
-- `provider = "vosk"` uses lightweight local Vosk ASR.
-- `language = "zh"` uses the bundled small Chinese model.
-- `model_path = "models/vosk-model-small-cn-0.22"` points to the bundled Vosk model in the portable release.
-- `device_name` can be left empty. Set it to part of a device name if you want a specific microphone or loopback device.
+- `source = "loopback"` captures audio currently played by the computer.
+- `source = "microphone"` captures microphone audio.
+- `chunk_seconds = 1.0` controls recognition batch length. Lower values can feel faster but may reduce accuracy.
+- `silence_rms = 0.02` filters background noise before recognition.
+- `language = "auto"` detects Chinese or English automatically. Set `zh` or `en` if you know the source language.
+- `model_size = "base"` balances speed and accuracy.
+- `allowed_languages = "zh,en"` suppresses accidental non-Chinese/non-English output from background noise.
+- `cpu_threads = 4` controls CPU decoding threads.
 
-Edit `.env`:
+Edit `.env` only for UI language:
 
 ```env
-TRANSLATION_PROVIDER=deepseek
-DEEPSEEK_API_KEY=your_deepseek_api_key
-DEEPSEEK_BASE_URL=https://api.deepseek.com
-DEEPSEEK_MODEL=deepseek-v4-flash
-TARGET_LANGUAGE=zh-cn
-SHOW_ORIGINAL=true
 UI_LANGUAGE=bilingual
 ```
 
-The display format is:
-
-```text
-EN: I think this is useful.
-中: 我觉得这个很有用。
-```
-
-If Whisper detects Chinese speech, the app translates it into English for the `EN:` line and keeps simplified Chinese text on the `中:` line. If it detects English speech, it keeps English on `EN:` and translates to simplified Chinese on `中:`.
-
-For responsiveness, the app displays the recognized text immediately with `翻译中... / Translating...`, then updates the same subtitle item when DeepSeek returns. Translation runs in the background and does not block the next audio chunk.
-
-## Packaging Later
-
-After the MVP is stable:
-
-```powershell
-pip install pyinstaller
-pyinstaller --noconsole --name AISubtitleWin --add-data "config.toml;." --add-data ".env;." ai_subtitle_win\__main__.py
-```
-
-The packaged app will appear in `dist\AISubtitleWin`.
+Supported values are `zh`, `en`, and `bilingual`.
 
 ## Notes
 
-- Loopback capture depends on Windows audio drivers. Some machines expose loopback devices clearly; others need microphone capture or stereo mix enabled.
-- If captions appear when nothing is playing, check `config.toml`: microphone mode or a virtual microphone can feed noise into the local ASR engine. Loopback mode now avoids falling back to the microphone automatically.
-- Real-time quality depends on CPU/GPU speed.
-- DeepSeek translation requires an API key because the model runs in DeepSeek's cloud. Set `TRANSLATION_PROVIDER=none` to display only local ASR transcription without online translation.
+- Whisper does not need a VPN after the model is already downloaded. The first model download uses Hugging Face and may depend on your network environment.
+- No API key is required in the current build.
+- Real-time speed depends heavily on CPU/GPU performance and selected Whisper model size.
 - Runtime logs are written to `logs\app.log`.
 
 ---
 
 # 中文说明
 
-这是一个 Windows 实时 AI 字幕生成工具。它可以自动监听电脑正在播放的声音，比如网页视频、播放器、会议软件、游戏或其他应用的声音，然后把音频识别成文字，并通过 DeepSeek 大模型翻译后显示在屏幕字幕窗口中。
+这是一个 Windows 实时 AI 字幕生成工具。它默认监听电脑正在播放的声音，比如网页视频、播放器、会议软件、游戏或其他应用的声音，然后用本地 `faster-whisper` 把音频识别成字幕，显示在屏幕置顶字幕窗口中。
 
-默认流程：
-
-```text
-系统/app/网页音频
- -> faster-whisper 识别原文
- -> DeepSeek V4 Flash 翻译
- -> 屏幕置顶字幕显示
-```
+当前版本只做字幕识别，不做翻译，不需要 DeepSeek API Key。
 
 ## 主要功能
 
 - 支持中文和英文语音识别
 - 默认监听电脑系统播放声音，不是麦克风
 - 支持麦克风作为备用输入
-- 使用 `faster-whisper` 在本地进行语音识别
-- 使用 DeepSeek V4 Flash 进行字幕翻译
-- 屏幕上显示原文和译文两行
-- 透明置顶字幕窗口
-- 启动脚本会自动检查 API Key，没填时会提示输入
-- 启动后 PowerShell 窗口会自动隐藏/退出
+- 使用 `faster-whisper` 本地识别
+- 中文结果强制转为简体中文
+- 单行字幕显示，避免遮挡屏幕
+- 字幕窗口可以拖动，拖动后不会自动回到居中位置
+- 控制面板支持暂停、隐藏字幕、打开配置、查看日志、切换界面语言
 
 ## 快速开始
 
@@ -141,38 +99,29 @@ cd D:\ai-subtitle-win
 .\run.ps1
 ```
 
-第一次运行时，脚本会自动安装依赖。如果没有填写 DeepSeek API Key，会出现中英双语提示，让你输入 Key。输入后会自动保存到 `.env` 文件。
+第一次运行会自动安装依赖，也可能会下载 Whisper 模型。启动后 PowerShell 窗口会自动关闭，只保留软件控制面板。
 
-第一次使用 Whisper 模型时，程序可能会下载模型文件，需要等待一会儿。
+## 如何调速度和准确度
 
-## 配置 DeepSeek
+打开 `config.toml`：
 
-复制 `.env.example` 为 `.env`，或直接运行 `run.ps1` 自动创建。
-
-`.env` 示例：
-
-```env
-TRANSLATION_PROVIDER=deepseek
-DEEPSEEK_API_KEY=你的_deepseek_api_key
-DEEPSEEK_BASE_URL=https://api.deepseek.com
-DEEPSEEK_MODEL=deepseek-v4-flash
-TARGET_LANGUAGE=zh-cn
-SHOW_ORIGINAL=true
-UI_LANGUAGE=bilingual
+```toml
+[speech]
+model_size = "base"
+language = "auto"
+beam_size = 1
+compute_type = "int8"
+cpu_threads = 4
+allowed_languages = "zh,en"
+min_language_probability = 0.45
+no_speech_threshold = 0.6
 ```
 
-如果你只想显示 Whisper 识别出来的原文，不想调用在线大模型翻译，可以设置：
-
-```env
-TRANSLATION_PROVIDER=none
-```
-
-## 字幕显示格式
-
-```text
-EN: I think this is useful.
-中: 我觉得这个很有用。
-```
+- 想更快：把 `model_size` 改成 `"tiny"`。
+- 想更准：把 `model_size` 改成 `"small"`，但加载和识别会更慢。
+- 明确只有中文：把 `language` 改成 `"zh"`。
+- 明确只有英文：把 `language` 改成 `"en"`。
+- 防止噪声乱出其他语言：保持 `allowed_languages = "zh,en"`。
 
 ## 常用快捷键
 
@@ -185,27 +134,12 @@ EN: I think this is useful.
 
 ### API Key 是必须的吗？
 
-如果使用 DeepSeek、OpenAI、Gemini、Groq 这类云端大模型翻译，就需要 API Key。API Key 用来识别账号、计费和限制请求频率。
+不是。当前版本不做翻译，只用本地 Whisper 识别字幕，所以不需要 API Key。
 
-如果不想使用 API Key，有几个选择：
+### Whisper 需要 VPN 吗？
 
-- 设置 `TRANSLATION_PROVIDER=none`，只显示本地 Whisper 识别原文
-- 后续接入 Ollama 等本地大模型，在本机离线翻译
-- 自建翻译服务，比如 LibreTranslate 或本地翻译模型
-
-当前版本推荐先使用 DeepSeek API Key，因为成本低、中文翻译效果好、接入简单。
+运行识别本身不需要 VPN。第一次使用某个 Whisper 模型时，程序可能需要从 Hugging Face 下载模型；这一步是否顺畅取决于当前网络。模型下载好之后，后续就可以本地加载。
 
 ### 为什么默认抓系统声音？
 
 这个工具主要用于给网页、视频、会议、游戏或其他应用生成实时字幕，所以默认使用 Windows loopback 捕获电脑正在播放的声音。如果你的设备不支持 loopback，可以在 `config.toml` 里把 `source` 改成 `microphone`。
-
-### 可以打包成 exe 吗？
-
-可以。MVP 稳定后可以使用 PyInstaller 打包：
-
-```powershell
-pip install pyinstaller
-pyinstaller --noconsole --name AISubtitleWin --add-data "config.toml;." --add-data ".env;." ai_subtitle_win\__main__.py
-```
-
-生成结果会在 `dist\AISubtitleWin` 目录中。

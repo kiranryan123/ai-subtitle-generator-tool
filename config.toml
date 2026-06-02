@@ -3,13 +3,18 @@
 source = "loopback"
 device_name = ""
 sample_rate = 16000
-chunk_seconds = 0.35
+chunk_seconds = 1.0
 silence_rms = 0.02
 
-[asr]
-provider = "vosk"
-language = "zh"
-model_path = "models/vosk-model-small-cn-0.22"
+[speech]
+model_size = "base"
+language = "auto"
+beam_size = 1
+compute_type = "int8"
+cpu_threads = 4
+allowed_languages = "zh,en"
+min_language_probability = 0.45
+no_speech_threshold = 0.6
 
 [overlay]
 font_family = "Microsoft YaHei UI"
