@@ -4,7 +4,7 @@ source = "loopback"
 device_name = ""
 sample_rate = 16000
 chunk_seconds = 3.0
-silence_rms = 0.012
+silence_rms = 0.02
 
 [speech]
 model_size = "base"

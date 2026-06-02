@@ -55,7 +55,7 @@ cd D:\ai-subtitle-win
 
 Edit `config.toml`:
 
-- `source = "loopback"` captions app, webpage, meeting, video, and game audio played by the computer. If that does not work on your device, use `source = "microphone"`.
+- `source = "loopback"` captions app, webpage, meeting, video, and game audio played by the computer. It will not silently fall back to the microphone. If you want microphone captions, set `source = "microphone"`.
 - `language = "auto"` detects Chinese or English automatically.
 - `model_size = "base"` is a good MVP choice. Use `small`, `medium`, or `large-v3` for better accuracy if your computer can handle it.
 - `device_name` can be left empty. Set it to part of a device name if you want a specific microphone or loopback device.
@@ -92,6 +92,7 @@ The packaged app will appear in `dist\AISubtitleWin`.
 ## Notes
 
 - Loopback capture depends on Windows audio drivers. Some machines expose loopback devices clearly; others need microphone capture or stereo mix enabled.
+- If captions appear when nothing is playing, check `config.toml`: microphone mode or a virtual microphone can feed noise into Whisper. Loopback mode now avoids falling back to the microphone automatically.
 - Real-time quality depends on CPU/GPU speed. NVIDIA GPUs can be used by installing the CUDA-enabled dependencies supported by `faster-whisper`.
 - DeepSeek translation requires an API key because the model runs in DeepSeek's cloud. Set `TRANSLATION_PROVIDER=none` to display only Whisper transcription without online translation.
 - Runtime logs are written to `logs\app.log`. If the app says it is loading the speech model for a long time, it is usually downloading or initializing the Whisper model before any DeepSeek API call happens.

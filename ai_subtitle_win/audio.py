@@ -14,12 +14,26 @@ class AudioDevice:
     is_loopback: bool
 
 
+def _looks_like_loopback_device(name: str) -> bool:
+    lowered = name.lower()
+    markers = (
+        "loopback",
+        "speaker",
+        "speakers",
+        "output",
+        "playback",
+        "扬声器",
+        "本机扬声器",
+    )
+    return any(marker in lowered for marker in markers)
+
+
 def list_devices() -> list[AudioDevice]:
     import soundcard as sc
 
     devices: list[AudioDevice] = []
     for mic in sc.all_microphones(include_loopback=True):
-        devices.append(AudioDevice(name=mic.name, is_loopback="loopback" in mic.name.lower()))
+        devices.append(AudioDevice(name=mic.name, is_loopback=_looks_like_loopback_device(mic.name)))
     return devices
 
 
@@ -39,9 +53,21 @@ def _pick_microphone(config: AudioConfig):
         raise RuntimeError(f"Audio device containing {config.device_name!r} was not found.")
 
     if include_loopback:
+        default_speaker_name = sc.default_speaker().name.lower()
         for microphone in microphones:
-            if "loopback" in microphone.name.lower():
+            if microphone.name.lower() == default_speaker_name:
                 return microphone
+        for microphone in microphones:
+            name = microphone.name.lower()
+            if name in default_speaker_name or default_speaker_name in name:
+                return microphone
+        for microphone in microphones:
+            if _looks_like_loopback_device(microphone.name):
+                return microphone
+        raise RuntimeError(
+            "System audio loopback capture was not found. "
+            "Set source = \"microphone\" in config.toml if you want microphone captions."
+        )
 
     return sc.default_microphone()
 
