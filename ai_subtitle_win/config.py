@@ -21,7 +21,7 @@ class AudioConfig:
 
 @dataclass(frozen=True)
 class SpeechConfig:
-    model_size: str = "small"
+    model_size: str = "base"
     language: str = "auto"
     beam_size: int = 3
     compute_type: str = "int8"
@@ -71,10 +71,17 @@ def load_config(path: Path) -> AppConfig:
     with path.open("rb") as handle:
         data = tomllib.load(handle)
 
-    audio = AudioConfig(**{**AudioConfig().__dict__, **data.get("audio", {})})
-    speech = SpeechConfig(**{**SpeechConfig().__dict__, **data.get("speech", {})})
-    overlay = OverlayConfig(**{**OverlayConfig().__dict__, **data.get("overlay", {})})
+    audio = _build_config(AudioConfig, data.get("audio", {}))
+    speech = _build_config(SpeechConfig, data.get("speech", {}))
+    overlay = _build_config(OverlayConfig, data.get("overlay", {}))
     return AppConfig(audio=audio, speech=speech, overlay=overlay, translation=_load_translation_config())
+
+
+def _build_config(config_type, values: dict):
+    defaults = config_type()
+    allowed = defaults.__dict__.keys()
+    filtered = {key: value for key, value in values.items() if key in allowed}
+    return config_type(**{**defaults.__dict__, **filtered})
 
 
 def _env_bool(name: str, default: bool) -> bool:
