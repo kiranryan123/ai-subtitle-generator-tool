@@ -17,6 +17,7 @@ from .text_utils import to_simplified
 
 
 TRANSLATING_TEXT = "翻译中... / Translating..."
+PREVIEW_ID = 0
 
 
 def _setup_logging() -> None:
@@ -84,15 +85,17 @@ def _worker(config_path: Path, outbox: queue.Queue, stop_flag: threading.Event, 
                 logging.info("Transcript: %s", transcript.text)
                 source_language = (transcript.language or "").lower()
                 source_is_chinese = source_language.startswith("zh")
+                if not transcript.is_final:
+                    preview_text = to_simplified(transcript.text) if source_is_chinese else transcript.text
+                    outbox.put(("caption", PREVIEW_ID, preview_text))
+                    continue
                 caption_id += 1
                 if source_is_chinese:
                     simplified_text = to_simplified(transcript.text)
-                    preview = SubtitlePair(english=TRANSLATING_TEXT, chinese=simplified_text)
-                    outbox.put(("caption", caption_id, preview.format()))
+                    outbox.put(("caption", caption_id, simplified_text))
                     executor.submit(translate_later, caption_id, simplified_text, True, "en")
                 else:
-                    preview = SubtitlePair(english=transcript.text, chinese=TRANSLATING_TEXT)
-                    outbox.put(("caption", caption_id, preview.format()))
+                    outbox.put(("caption", caption_id, transcript.text))
                     executor.submit(translate_later, caption_id, transcript.text, False, "zh-cn")
     except Exception as exc:
         logging.exception("Worker failed")

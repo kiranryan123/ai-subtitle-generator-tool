@@ -3,7 +3,7 @@
 source = "loopback"
 device_name = ""
 sample_rate = 16000
-chunk_seconds = 1.0
+chunk_seconds = 0.35
 silence_rms = 0.02
 
 [asr]
@@ -19,5 +19,5 @@ max_width_ratio = 0.86
 background = "#000000"
 foreground = "#ffffff"
 alpha = 0.72
-max_history = 3
+max_history = 1
 caption_lifetime_seconds = 10.0

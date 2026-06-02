@@ -13,6 +13,7 @@ from .config import ASRConfig
 class Transcript:
     text: str
     language: str | None
+    is_final: bool = True
 
 
 class VoskTranscriber:
@@ -34,12 +35,13 @@ class VoskTranscriber:
     def transcribe(self, samples: np.ndarray) -> Transcript:
         clipped = np.clip(samples, -1.0, 1.0)
         pcm = (clipped * 32767).astype(np.int16).tobytes()
-        if self._recognizer.AcceptWaveform(pcm):
+        is_final = self._recognizer.AcceptWaveform(pcm)
+        if is_final:
             result = json.loads(self._recognizer.Result())
         else:
             result = json.loads(self._recognizer.PartialResult())
         text = str(result.get("text") or result.get("partial") or "").strip()
-        return Transcript(text=text, language=self._config.language)
+        return Transcript(text=text, language=self._config.language, is_final=is_final)
 
 
 def build_transcriber(config: ASRConfig):

@@ -15,6 +15,7 @@ class SubtitleOverlay:
         self._captions: list[tuple[int, str, float]] = []
         self._status_mode = True
         self._font = tkfont.Font(family=config.font_family, size=config.font_size, weight="bold")
+        self._manual_position = False
 
         root.title("AI Subtitle Win")
         root.attributes("-topmost", True)
@@ -58,10 +59,13 @@ class SubtitleOverlay:
         content_width = max((self._font.measure(line) for line in lines), default=280)
         width = min(max_width, max(420, content_width + 72))
         line_height = self._font.metrics("linespace")
-        height = min(int(self.root.winfo_screenheight() * 0.45), max(line_height * len(lines) + 42, 80))
-        x = int((self.root.winfo_screenwidth() - width) / 2)
-        y = self.root.winfo_screenheight() - height - self.config.bottom_margin
-        self.root.geometry(f"{width}x{height}+{x}+{y}")
+        height = min(int(self.root.winfo_screenheight() * 0.28), max(line_height * len(lines) + 42, 80))
+        if self._manual_position:
+            self.root.geometry(f"{width}x{height}")
+        else:
+            x = int((self.root.winfo_screenwidth() - width) / 2)
+            y = self.root.winfo_screenheight() - height - self.config.bottom_margin
+            self.root.geometry(f"{width}x{height}+{x}+{y}")
 
     def set_text(self, text: str) -> None:
         if self._is_caption(text):
@@ -136,6 +140,7 @@ class SubtitleOverlay:
 
     def _begin_drag(self, event) -> None:
         self._drag_start = (event.x, event.y)
+        self._manual_position = True
 
     def _drag(self, event) -> None:
         if self._drag_start is None:

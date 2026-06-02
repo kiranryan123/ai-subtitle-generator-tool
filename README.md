@@ -59,7 +59,7 @@ cd D:\ai-subtitle-win
 Edit `config.toml`:
 
 - `source = "loopback"` captions app, webpage, meeting, video, and game audio played by the computer. It will not silently fall back to the microphone. If you want microphone captions, set `source = "microphone"`.
-- `chunk_seconds = 1.0` controls responsiveness. Lower values feel faster but increase CPU usage and translation calls.
+- `chunk_seconds = 0.35` controls responsiveness. Lower values feel faster but increase CPU usage.
 - `provider = "vosk"` uses lightweight local Vosk ASR.
 - `language = "zh"` uses the bundled small Chinese model.
 - `model_path = "models/vosk-model-small-cn-0.22"` points to the bundled Vosk model in the portable release.
