@@ -12,7 +12,7 @@ class SubtitleOverlay:
         self.root = root
         self.config = config
         self._drag_start: tuple[int, int] | None = None
-        self._captions: list[tuple[str, float]] = []
+        self._captions: list[tuple[int, str, float]] = []
         self._status_mode = True
         self._font = tkfont.Font(family=config.font_family, size=config.font_size, weight="bold")
 
@@ -66,18 +66,30 @@ class SubtitleOverlay:
     def set_text(self, text: str) -> None:
         if self._is_caption(text):
             self._status_mode = False
-            self._captions.append((text, time.monotonic()))
+            self._captions.append((len(self._captions) + 1, text, time.monotonic()))
             self._trim_captions()
             self._render_captions()
         else:
             self.set_status(text)
+
+    def set_caption(self, caption_id: int, text: str) -> None:
+        self._status_mode = False
+        now = time.monotonic()
+        for index, (existing_id, _caption, created_at) in enumerate(self._captions):
+            if existing_id == caption_id:
+                self._captions[index] = (existing_id, text, created_at)
+                break
+        else:
+            self._captions.append((caption_id, text, now))
+        self._trim_captions()
+        self._render_captions()
 
     def _current_lines(self) -> list[str]:
         if self._status_mode:
             content = self.text.get("1.0", "end-1c")
             return content.splitlines() or [""]
         lines: list[str] = []
-        for caption, _created_at in self._captions:
+        for _caption_id, caption, _created_at in self._captions:
             lines.extend(caption.splitlines())
             lines.append("")
         return lines[:-1] if lines else [""]
@@ -90,14 +102,14 @@ class SubtitleOverlay:
         lifetime = self.config.caption_lifetime_seconds
         self._captions = [
             item for item in self._captions[-self.config.max_history :]
-            if now - item[1] <= lifetime
+            if now - item[2] <= lifetime
         ]
 
     def _render_captions(self) -> None:
         self.text.configure(state="normal")
         self.text.delete("1.0", "end")
         captions = self._captions[-self.config.max_history :]
-        for index, (caption, _created_at) in enumerate(captions):
+        for index, (_caption_id, caption, _created_at) in enumerate(captions):
             age_from_newest = len(captions) - index - 1
             tag = "current" if age_from_newest == 0 else "recent" if age_from_newest == 1 else "old"
             self.text.insert("end", caption, tag)

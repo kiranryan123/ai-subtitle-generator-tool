@@ -63,6 +63,7 @@ class DeepSeekTranslator:
                 },
             ],
             temperature=0.2,
+            max_tokens=160,
         )
         content = response.choices[0].message.content
         return (content or "").strip()

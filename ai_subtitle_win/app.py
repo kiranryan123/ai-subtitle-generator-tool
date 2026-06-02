@@ -3,6 +3,7 @@ from __future__ import annotations
 import queue
 import logging
 import threading
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 import tkinter as tk
 
@@ -11,6 +12,7 @@ from .config import load_config
 from .overlay import SubtitleOverlay
 from .transcriber import WhisperTranscriber
 from .translator import SubtitlePair, build_translator
+from .text_utils import to_simplified
 
 
 TRANSLATING_TEXT = "翻译中... / Translating..."
@@ -27,7 +29,7 @@ def _setup_logging() -> None:
     )
 
 
-def _worker(config_path: Path, outbox: queue.Queue[str], stop_flag: threading.Event, paused: threading.Event) -> None:
+def _worker(config_path: Path, outbox: queue.Queue, stop_flag: threading.Event, paused: threading.Event) -> None:
     try:
         config = load_config(config_path)
         logging.info("App worker started")
@@ -48,6 +50,28 @@ def _worker(config_path: Path, outbox: queue.Queue[str], stop_flag: threading.Ev
             config.translation.target_language,
         )
         outbox.put("模型加载完成，开始监听和翻译...\nReady. Listening and translating...")
+        caption_id = 0
+        executor = ThreadPoolExecutor(max_workers=2, thread_name_prefix="translator")
+
+        def translate_later(
+            item_id: int,
+            source_text: str,
+            source_is_chinese: bool,
+            target_language: str,
+        ) -> None:
+            try:
+                translated_text = translator.translate(source_text, target_language=target_language)
+                if target_language == "zh-cn":
+                    translated_text = to_simplified(translated_text)
+                if source_is_chinese:
+                    subtitle = SubtitlePair(english=translated_text, chinese=to_simplified(source_text))
+                else:
+                    subtitle = SubtitlePair(english=source_text, chinese=translated_text)
+                logging.info("Translation completed")
+                outbox.put(("caption", item_id, subtitle.format(show_original=config.translation.show_original)))
+            except Exception as exc:
+                logging.exception("Translation failed")
+                outbox.put(("caption", item_id, f"EN: {source_text}\n中: 翻译失败 / Translation failed: {exc}"))
 
         for samples in audio_chunks(config.audio, stop_flag):
             if paused.is_set():
@@ -59,16 +83,16 @@ def _worker(config_path: Path, outbox: queue.Queue[str], stop_flag: threading.Ev
                 logging.info("Transcript: %s", transcript.text)
                 source_language = (transcript.language or "").lower()
                 source_is_chinese = source_language.startswith("zh")
+                caption_id += 1
                 if source_is_chinese:
-                    outbox.put(SubtitlePair(english=TRANSLATING_TEXT, chinese=transcript.text).format())
-                    translated = translator.translate(transcript.text, target_language="en")
-                    subtitle = SubtitlePair(english=translated, chinese=transcript.text)
+                    simplified_text = to_simplified(transcript.text)
+                    preview = SubtitlePair(english=TRANSLATING_TEXT, chinese=simplified_text)
+                    outbox.put(("caption", caption_id, preview.format()))
+                    executor.submit(translate_later, caption_id, simplified_text, True, "en")
                 else:
-                    outbox.put(SubtitlePair(english=transcript.text, chinese=TRANSLATING_TEXT).format())
-                    translated = translator.translate(transcript.text, target_language="zh-cn")
-                    subtitle = SubtitlePair(english=transcript.text, chinese=translated)
-                logging.info("Translation completed")
-                outbox.put(subtitle.format(show_original=config.translation.show_original))
+                    preview = SubtitlePair(english=transcript.text, chinese=TRANSLATING_TEXT)
+                    outbox.put(("caption", caption_id, preview.format()))
+                    executor.submit(translate_later, caption_id, transcript.text, False, "zh-cn")
     except Exception as exc:
         logging.exception("Worker failed")
         outbox.put(f"错误 / Error：{exc}")
@@ -78,7 +102,7 @@ def main() -> None:
     _setup_logging()
     config_path = Path.cwd() / "config.toml"
     config = load_config(config_path)
-    messages: queue.Queue[str] = queue.Queue()
+    messages: queue.Queue = queue.Queue()
     stop_flag = threading.Event()
     paused = threading.Event()
 
@@ -95,7 +119,12 @@ def main() -> None:
     def pump_messages() -> None:
         while True:
             try:
-                overlay.set_text(messages.get_nowait())
+                message = messages.get_nowait()
+                if isinstance(message, tuple) and message[0] == "caption":
+                    _kind, caption_id, text = message
+                    overlay.set_caption(caption_id, text)
+                else:
+                    overlay.set_text(message)
             except queue.Empty:
                 break
         root.after(120, pump_messages)

@@ -3,7 +3,7 @@
 source = "loopback"
 device_name = ""
 sample_rate = 16000
-chunk_seconds = 1.5
+chunk_seconds = 1.0
 silence_rms = 0.02
 
 [speech]

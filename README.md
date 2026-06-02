@@ -56,7 +56,7 @@ cd D:\ai-subtitle-win
 Edit `config.toml`:
 
 - `source = "loopback"` captions app, webpage, meeting, video, and game audio played by the computer. It will not silently fall back to the microphone. If you want microphone captions, set `source = "microphone"`.
-- `chunk_seconds = 1.5` controls responsiveness. Lower values feel faster but increase CPU usage and translation calls.
+- `chunk_seconds = 1.0` controls responsiveness. Lower values feel faster but increase CPU usage and translation calls.
 - `language = "auto"` detects Chinese or English automatically.
 - `model_size = "base"` is a good MVP choice. Use `small`, `medium`, or `large-v3` for better accuracy if your computer can handle it.
 - `device_name` can be left empty. Set it to part of a device name if you want a specific microphone or loopback device.
@@ -79,7 +79,9 @@ EN: I think this is useful.
 中: 我觉得这个很有用。
 ```
 
-If Whisper detects Chinese speech, the app translates it into English for the `EN:` line and keeps the Chinese text on the `中:` line. If it detects English speech, it keeps English on `EN:` and translates to Chinese on `中:`.
+If Whisper detects Chinese speech, the app translates it into English for the `EN:` line and keeps simplified Chinese text on the `中:` line. If it detects English speech, it keeps English on `EN:` and translates to simplified Chinese on `中:`.
+
+For responsiveness, the app displays the recognized text immediately with `翻译中... / Translating...`, then updates the same subtitle item when DeepSeek returns. Translation runs in the background and does not block the next audio chunk.
 
 ## Packaging Later
 
