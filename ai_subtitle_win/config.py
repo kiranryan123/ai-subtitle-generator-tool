@@ -14,7 +14,7 @@ class AudioConfig:
     source: str = "loopback"
     device_name: str = ""
     sample_rate: int = 16000
-    chunk_seconds: float = 1.0
+    chunk_seconds: float = 0.6
     silence_rms: float = 0.02
 
 

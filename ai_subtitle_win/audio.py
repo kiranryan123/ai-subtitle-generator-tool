@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import queue
+import threading
 from dataclasses import dataclass
 from typing import Iterable
 
@@ -75,14 +77,32 @@ def _pick_microphone(config: AudioConfig):
 def audio_chunks(config: AudioConfig, stop_flag) -> Iterable[np.ndarray]:
     microphone = _pick_microphone(config)
     frame_count = int(config.sample_rate * config.chunk_seconds)
+    chunks: queue.Queue[np.ndarray] = queue.Queue(maxsize=2)
 
-    with microphone.recorder(samplerate=config.sample_rate, channels=1) as recorder:
-        while not stop_flag.is_set():
-            data = recorder.record(numframes=frame_count)
-            mono = np.asarray(data, dtype=np.float32).reshape(-1)
-            if mono.size == 0:
-                continue
-            yield mono
+    def capture_loop() -> None:
+        with microphone.recorder(samplerate=config.sample_rate, channels=1) as recorder:
+            while not stop_flag.is_set():
+                data = recorder.record(numframes=frame_count)
+                mono = np.asarray(data, dtype=np.float32).reshape(-1)
+                if mono.size == 0:
+                    continue
+                try:
+                    chunks.put_nowait(mono)
+                except queue.Full:
+                    try:
+                        chunks.get_nowait()
+                    except queue.Empty:
+                        pass
+                    chunks.put_nowait(mono)
+
+    capture_thread = threading.Thread(target=capture_loop, name="audio-capture", daemon=True)
+    capture_thread.start()
+
+    while not stop_flag.is_set():
+        try:
+            yield chunks.get(timeout=0.1)
+        except queue.Empty:
+            continue
 
 
 def rms(samples: np.ndarray) -> float:

@@ -23,7 +23,7 @@ cd D:\ai-subtitle-win
 
 The first run installs Python dependencies and may download the selected Whisper model. After startup, the PowerShell window closes and the desktop control panel stays open.
 
-For a fast and reasonably accurate first test, keep this setting in `config.toml`:
+For the default real-time test, keep this setting in `config.toml`:
 
 ```toml
 [speech]
@@ -36,7 +36,7 @@ min_language_probability = 0.45
 no_speech_threshold = 0.6
 ```
 
-Use `model_size = "tiny"` if speed matters most. Use `model_size = "small"` if accuracy matters more and the computer is fast enough.
+Use `model_size = "tiny"` if speed matters most and the tiny model has downloaded successfully. The app records audio continuously in the background and keeps only the newest chunks, so it prefers staying close to real time over processing every old chunk.
 
 ## Controls
 
@@ -51,10 +51,10 @@ Edit `config.toml`:
 
 - `source = "loopback"` captures audio currently played by the computer.
 - `source = "microphone"` captures microphone audio.
-- `chunk_seconds = 1.0` controls recognition batch length. Lower values can feel faster but may reduce accuracy.
+- `chunk_seconds = 0.6` controls recognition batch length. Lower values can feel faster but may reduce accuracy.
 - `silence_rms = 0.02` filters background noise before recognition.
 - `language = "auto"` detects Chinese or English automatically. Set `zh` or `en` if you know the source language.
-- `model_size = "base"` balances speed and accuracy.
+- `model_size = "base"` is the default balance. Use `tiny` for speed if the model downloads successfully.
 - `allowed_languages = "zh,en"` suppresses accidental non-Chinese/non-English output from background noise.
 - `cpu_threads = 4` controls CPU decoding threads.
 
@@ -117,8 +117,9 @@ min_language_probability = 0.45
 no_speech_threshold = 0.6
 ```
 
-- 想更快：把 `model_size` 改成 `"tiny"`。
-- 想更准：把 `model_size` 改成 `"small"`，但加载和识别会更慢。
+- 当前默认是可用性和准确度优先：`model_size = "base"`。
+- 想更快：可以把 `model_size` 改成 `"tiny"`，但第一次需要下载 tiny 模型。
+- 想更准：把 `model_size` 改成 `"base"` 或 `"small"`，但加载和识别会更慢。
 - 明确只有中文：把 `language` 改成 `"zh"`。
 - 明确只有英文：把 `language` 改成 `"en"`。
 - 防止噪声乱出其他语言：保持 `allowed_languages = "zh,en"`。
