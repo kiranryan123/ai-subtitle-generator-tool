@@ -11,7 +11,7 @@ from .audio import audio_chunks, list_devices, rms
 from .config import load_config
 from .control_panel import ControlPanel
 from .overlay import SubtitleOverlay
-from .transcriber import WhisperTranscriber
+from .transcriber import build_transcriber
 from .translator import SubtitlePair, build_translator
 from .text_utils import to_simplified
 
@@ -37,11 +37,11 @@ def _worker(config_path: Path, outbox: queue.Queue, stop_flag: threading.Event, 
         outbox.put(
             "正在加载 AI 语音模型...\n"
             "Loading AI speech model...\n"
-            "首次运行可能需要下载 Whisper；DeepSeek 会在识别到语音后才调用。"
+            "请确认 Vosk 模型已放入 models 文件夹；DeepSeek 会在识别到语音后才调用。"
         )
-        logging.info("Loading Whisper model: %s", config.speech.model_size)
-        transcriber = WhisperTranscriber(config.speech)
-        logging.info("Whisper model loaded")
+        logging.info("Loading ASR model: provider=%s model=%s", config.asr.provider, config.asr.model_path)
+        transcriber = build_transcriber(config.asr)
+        logging.info("ASR model loaded")
         outbox.put("正在初始化翻译模块...\nInitializing translation module...")
         translator = build_translator(config.translation)
         logging.info(

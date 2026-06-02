@@ -6,11 +6,10 @@ sample_rate = 16000
 chunk_seconds = 1.0
 silence_rms = 0.02
 
-[speech]
-model_size = "base"
-language = "auto"
-beam_size = 3
-compute_type = "int8"
+[asr]
+provider = "vosk"
+language = "zh"
+model_path = "models/vosk-model-small-cn-0.22"
 
 [overlay]
 font_family = "Microsoft YaHei UI"

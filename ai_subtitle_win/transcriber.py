@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import json
+from pathlib import Path
 
 import numpy as np
 
-from .config import SpeechConfig
+from .config import ASRConfig
 
 
 @dataclass(frozen=True)
@@ -13,25 +15,35 @@ class Transcript:
     language: str | None
 
 
-class WhisperTranscriber:
-    def __init__(self, config: SpeechConfig) -> None:
-        from faster_whisper import WhisperModel
+class VoskTranscriber:
+    def __init__(self, config: ASRConfig) -> None:
+        from vosk import KaldiRecognizer, Model, SetLogLevel
 
+        SetLogLevel(-1)
         self._config = config
-        self._model = WhisperModel(
-            config.model_size,
-            device="auto",
-            compute_type=config.compute_type,
-        )
+        model_path = Path(config.model_path)
+        if not model_path.exists():
+            raise RuntimeError(
+                f"Vosk model not found: {model_path}. "
+                "Download a small Vosk model and place it under the models folder."
+            )
+        self._model = Model(str(model_path))
+        self._recognizer = KaldiRecognizer(self._model, 16000)
+        self._recognizer.SetWords(False)
 
     def transcribe(self, samples: np.ndarray) -> Transcript:
-        language = None if self._config.language == "auto" else self._config.language
-        segments, info = self._model.transcribe(
-            samples,
-            language=language,
-            beam_size=self._config.beam_size,
-            vad_filter=True,
-            condition_on_previous_text=False,
-        )
-        text = " ".join(segment.text.strip() for segment in segments).strip()
-        return Transcript(text=text, language=getattr(info, "language", None))
+        clipped = np.clip(samples, -1.0, 1.0)
+        pcm = (clipped * 32767).astype(np.int16).tobytes()
+        if self._recognizer.AcceptWaveform(pcm):
+            result = json.loads(self._recognizer.Result())
+        else:
+            result = json.loads(self._recognizer.PartialResult())
+        text = str(result.get("text") or result.get("partial") or "").strip()
+        return Transcript(text=text, language=self._config.language)
+
+
+def build_transcriber(config: ASRConfig):
+    provider = config.provider.lower()
+    if provider == "vosk":
+        return VoskTranscriber(config)
+    raise RuntimeError(f"Unsupported ASR_PROVIDER: {config.provider}")

@@ -20,11 +20,10 @@ class AudioConfig:
 
 
 @dataclass(frozen=True)
-class SpeechConfig:
-    model_size: str = "base"
-    language: str = "auto"
-    beam_size: int = 3
-    compute_type: str = "int8"
+class ASRConfig:
+    provider: str = "vosk"
+    language: str = "zh"
+    model_path: str = "models/vosk-model-small-cn-0.22"
 
 
 @dataclass(frozen=True)
@@ -53,7 +52,7 @@ class TranslationConfig:
 @dataclass(frozen=True)
 class AppConfig:
     audio: AudioConfig
-    speech: SpeechConfig
+    asr: ASRConfig
     overlay: OverlayConfig
     translation: TranslationConfig
 
@@ -66,15 +65,15 @@ def load_config(path: Path) -> AppConfig:
         load_dotenv(env_path, override=False)
 
     if not path.exists():
-        return AppConfig(AudioConfig(), SpeechConfig(), OverlayConfig(), _load_translation_config())
+        return AppConfig(AudioConfig(), ASRConfig(), OverlayConfig(), _load_translation_config())
 
     with path.open("rb") as handle:
         data = tomllib.load(handle)
 
     audio = _build_config(AudioConfig, data.get("audio", {}))
-    speech = _build_config(SpeechConfig, data.get("speech", {}))
+    asr = _load_asr_config(_build_config(ASRConfig, data.get("asr", data.get("speech", {}))))
     overlay = _build_config(OverlayConfig, data.get("overlay", {}))
-    return AppConfig(audio=audio, speech=speech, overlay=overlay, translation=_load_translation_config())
+    return AppConfig(audio=audio, asr=asr, overlay=overlay, translation=_load_translation_config())
 
 
 def _build_config(config_type, values: dict):
@@ -89,6 +88,14 @@ def _env_bool(name: str, default: bool) -> bool:
     if value is None:
         return default
     return value.strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _load_asr_config(base: ASRConfig) -> ASRConfig:
+    return ASRConfig(
+        provider=os.getenv("ASR_PROVIDER", base.provider),
+        language=os.getenv("ASR_LANGUAGE", base.language),
+        model_path=os.getenv("ASR_MODEL_PATH", base.model_path),
+    )
 
 
 def _load_translation_config() -> TranslationConfig:

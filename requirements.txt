@@ -1,8 +1,7 @@
-faster-whisper>=1.0.0
 numpy>=1.24.0,<1.25.0
 openai>=1.0.0
 opencc-python-reimplemented>=0.1.7
 python-dotenv>=1.0.0
 soundcard>=0.4.3
-tokenizers>=0.13,<0.21
 tomli>=2.0.1; python_version < "3.11"
+vosk>=0.3.45

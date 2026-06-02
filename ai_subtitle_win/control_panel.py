@@ -21,9 +21,9 @@ TEXT = {
     "language": ("界面语言", "UI language"),
     "starting": ("正在启动...", "Starting..."),
     "info": (
-        "系统/app/网页音频 -> Whisper 本地识别 -> DeepSeek 后台翻译\n"
+        "系统/app/网页音频 -> Vosk 本地识别 -> DeepSeek 后台翻译\n"
         "中文输出强制简体；新字幕先显示，译文稍后补上。",
-        "System/app/browser audio -> local Whisper recognition -> DeepSeek background translation\n"
+        "System/app/browser audio -> local Vosk recognition -> DeepSeek background translation\n"
         "Chinese output is forced to Simplified Chinese. New captions appear first; translations update later.",
     ),
 }
