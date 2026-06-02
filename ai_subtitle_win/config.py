@@ -36,6 +36,8 @@ class OverlayConfig:
     background: str = "#000000"
     foreground: str = "#ffffff"
     alpha: float = 0.72
+    max_history: int = 3
+    caption_lifetime_seconds: float = 10.0
 
 
 @dataclass(frozen=True)
@@ -44,7 +46,7 @@ class TranslationConfig:
     deepseek_api_key: str = ""
     deepseek_base_url: str = "https://api.deepseek.com"
     deepseek_model: str = "deepseek-v4-flash"
-    target_language: str = "zh"
+    target_language: str = "zh-cn"
     show_original: bool = True
 
 
@@ -88,6 +90,6 @@ def _load_translation_config() -> TranslationConfig:
         deepseek_api_key=os.getenv("DEEPSEEK_API_KEY", ""),
         deepseek_base_url=os.getenv("DEEPSEEK_BASE_URL", "https://api.deepseek.com"),
         deepseek_model=os.getenv("DEEPSEEK_MODEL", "deepseek-v4-flash"),
-        target_language=os.getenv("TARGET_LANGUAGE", "zh"),
+        target_language=os.getenv("TARGET_LANGUAGE", "zh-cn"),
         show_original=_env_bool("SHOW_ORIGINAL", True),
     )

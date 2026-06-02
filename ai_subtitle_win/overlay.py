@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import time
 import tkinter as tk
 from tkinter import font as tkfont
 
@@ -11,6 +12,9 @@ class SubtitleOverlay:
         self.root = root
         self.config = config
         self._drag_start: tuple[int, int] | None = None
+        self._captions: list[tuple[str, float]] = []
+        self._status_mode = True
+        self._font = tkfont.Font(family=config.font_family, size=config.font_size, weight="bold")
 
         root.title("AI Subtitle Win")
         root.attributes("-topmost", True)
@@ -18,22 +22,30 @@ class SubtitleOverlay:
         root.overrideredirect(True)
         root.configure(bg=config.background)
 
-        self.label = tk.Label(
+        self.text = tk.Text(
             root,
-            text="AI 字幕已启动，等待声音...",
             bg=config.background,
             fg=config.foreground,
-            justify="center",
-            wraplength=self._wrap_length(),
             padx=24,
             pady=14,
-            font=tkfont.Font(family=config.font_family, size=config.font_size, weight="bold"),
+            font=self._font,
+            borderwidth=0,
+            highlightthickness=0,
+            insertwidth=0,
+            wrap="word",
+            state="disabled",
         )
-        self.label.pack(fill="both", expand=True)
+        self.text.tag_configure("current", foreground=config.foreground, justify="center")
+        self.text.tag_configure("recent", foreground="#d7d7d7", justify="center")
+        self.text.tag_configure("old", foreground="#989898", justify="center")
+        self.text.tag_configure("status", foreground=config.foreground, justify="center")
+        self.text.pack(fill="both", expand=True)
 
         root.bind("<Escape>", lambda _event: root.quit())
         root.bind("<ButtonPress-1>", self._begin_drag)
         root.bind("<B1-Motion>", self._drag)
+        self.set_status("AI 字幕已启动，等待声音...")
+        self._tick()
         self.place_bottom()
 
     def _wrap_length(self) -> int:
@@ -41,18 +53,74 @@ class SubtitleOverlay:
 
     def place_bottom(self) -> None:
         self.root.update_idletasks()
-        width = min(self.label.winfo_reqwidth(), self._wrap_length())
-        height = self.label.winfo_reqheight()
+        lines = self._current_lines()
+        max_width = self._wrap_length()
+        content_width = max((self._font.measure(line) for line in lines), default=280)
+        width = min(max_width, max(420, content_width + 72))
+        line_height = self._font.metrics("linespace")
+        height = min(int(self.root.winfo_screenheight() * 0.45), max(line_height * len(lines) + 42, 80))
         x = int((self.root.winfo_screenwidth() - width) / 2)
         y = self.root.winfo_screenheight() - height - self.config.bottom_margin
         self.root.geometry(f"{width}x{height}+{x}+{y}")
 
     def set_text(self, text: str) -> None:
-        self.label.configure(text=text)
+        if self._is_caption(text):
+            self._status_mode = False
+            self._captions.append((text, time.monotonic()))
+            self._trim_captions()
+            self._render_captions()
+        else:
+            self.set_status(text)
+
+    def _current_lines(self) -> list[str]:
+        if self._status_mode:
+            content = self.text.get("1.0", "end-1c")
+            return content.splitlines() or [""]
+        lines: list[str] = []
+        for caption, _created_at in self._captions:
+            lines.extend(caption.splitlines())
+            lines.append("")
+        return lines[:-1] if lines else [""]
+
+    def _is_caption(self, text: str) -> bool:
+        return text.startswith("EN:") and "\n中:" in text
+
+    def _trim_captions(self) -> None:
+        now = time.monotonic()
+        lifetime = self.config.caption_lifetime_seconds
+        self._captions = [
+            item for item in self._captions[-self.config.max_history :]
+            if now - item[1] <= lifetime
+        ]
+
+    def _render_captions(self) -> None:
+        self.text.configure(state="normal")
+        self.text.delete("1.0", "end")
+        captions = self._captions[-self.config.max_history :]
+        for index, (caption, _created_at) in enumerate(captions):
+            age_from_newest = len(captions) - index - 1
+            tag = "current" if age_from_newest == 0 else "recent" if age_from_newest == 1 else "old"
+            self.text.insert("end", caption, tag)
+            if index != len(captions) - 1:
+                self.text.insert("end", "\n\n", tag)
+        self.text.configure(state="disabled")
         self.place_bottom()
 
     def set_status(self, text: str) -> None:
-        self.set_text(text)
+        self._status_mode = True
+        self.text.configure(state="normal")
+        self.text.delete("1.0", "end")
+        self.text.insert("end", text, "status")
+        self.text.configure(state="disabled")
+        self.place_bottom()
+
+    def _tick(self) -> None:
+        if not self._status_mode:
+            before = len(self._captions)
+            self._trim_captions()
+            if len(self._captions) != before:
+                self._render_captions()
+        self.root.after(1000, self._tick)
 
     def _begin_drag(self, event) -> None:
         self._drag_start = (event.x, event.y)

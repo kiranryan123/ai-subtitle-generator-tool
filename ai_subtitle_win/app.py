@@ -65,7 +65,7 @@ def _worker(config_path: Path, outbox: queue.Queue[str], stop_flag: threading.Ev
                     subtitle = SubtitlePair(english=translated, chinese=transcript.text)
                 else:
                     outbox.put(SubtitlePair(english=transcript.text, chinese=TRANSLATING_TEXT).format())
-                    translated = translator.translate(transcript.text, target_language="zh")
+                    translated = translator.translate(transcript.text, target_language="zh-cn")
                     subtitle = SubtitlePair(english=transcript.text, chinese=translated)
                 logging.info("Translation completed")
                 outbox.put(subtitle.format(show_original=config.translation.show_original))

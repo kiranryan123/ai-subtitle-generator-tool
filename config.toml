@@ -20,3 +20,5 @@ max_width_ratio = 0.86
 background = "#000000"
 foreground = "#ffffff"
 alpha = 0.72
+max_history = 3
+caption_lifetime_seconds = 10.0
