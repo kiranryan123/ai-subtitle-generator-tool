@@ -8,6 +8,7 @@ This prototype shows live captions in a transparent always-on-top overlay. By de
 
 - Chinese and English speech recognition
 - Always-on-top transparent subtitle overlay
+- Desktop control panel for status, pause, overlay visibility, config, logs, and API key editing
 - System-audio loopback input by default
 - Microphone fallback input
 - DeepSeek V4 Flash subtitle translation
@@ -36,6 +37,8 @@ cd D:\ai-subtitle-win
 ```
 
 `run.ps1` installs missing dependencies, creates `.env` if needed, asks for `DEEPSEEK_API_KEY` when it is missing, starts the subtitle app through `pythonw.exe`, and then lets the PowerShell window close.
+
+After startup, the app opens a desktop control panel. The subtitle overlay stays on top of the screen, while the control panel lets you pause listening, hide/show subtitles, open `config.toml`, view `logs\app.log`, and edit `.env`.
 
 To replace an existing DeepSeek API key:
 

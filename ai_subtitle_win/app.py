@@ -9,6 +9,7 @@ import tkinter as tk
 
 from .audio import audio_chunks, list_devices, rms
 from .config import load_config
+from .control_panel import ControlPanel
 from .overlay import SubtitleOverlay
 from .transcriber import WhisperTranscriber
 from .translator import SubtitlePair, build_translator
@@ -107,7 +108,8 @@ def main() -> None:
     paused = threading.Event()
 
     root = tk.Tk()
-    overlay = SubtitleOverlay(root, config.overlay)
+    overlay_window = tk.Toplevel(root)
+    overlay = SubtitleOverlay(overlay_window, config.overlay)
 
     worker = threading.Thread(
         target=_worker,
@@ -116,6 +118,35 @@ def main() -> None:
     )
     worker.start()
 
+    def toggle_pause(_event=None) -> None:
+        if paused.is_set():
+            paused.clear()
+            overlay.set_status("继续监听...")
+            panel.set_status("正在监听和翻译 / Listening and translating")
+        else:
+            paused.set()
+            overlay.set_status("已暂停监听")
+            panel.set_status("已暂停监听 / Paused")
+
+    def toggle_overlay(visible: bool) -> None:
+        if visible:
+            overlay_window.deiconify()
+            overlay.place_bottom()
+        else:
+            overlay_window.withdraw()
+
+    def close() -> None:
+        stop_flag.set()
+        root.destroy()
+
+    panel = ControlPanel(
+        root,
+        project_dir=Path.cwd(),
+        on_toggle_pause=toggle_pause,
+        on_toggle_overlay=toggle_overlay,
+        on_quit=close,
+    )
+
     def pump_messages() -> None:
         while True:
             try:
@@ -123,19 +154,13 @@ def main() -> None:
                 if isinstance(message, tuple) and message[0] == "caption":
                     _kind, caption_id, text = message
                     overlay.set_caption(caption_id, text)
+                    panel.set_status("字幕已更新 / Subtitle updated")
                 else:
                     overlay.set_text(message)
+                    panel.set_status(message)
             except queue.Empty:
                 break
         root.after(120, pump_messages)
-
-    def toggle_pause(_event=None) -> None:
-        if paused.is_set():
-            paused.clear()
-            overlay.set_status("继续监听...")
-        else:
-            paused.set()
-            overlay.set_status("已暂停监听")
 
     def show_devices(_event=None) -> None:
         print("Audio devices:")
@@ -143,10 +168,7 @@ def main() -> None:
             kind = "loopback" if device.is_loopback else "microphone"
             print(f"- [{kind}] {device.name}")
         overlay.set_status("音频设备已输出到终端")
-
-    def close() -> None:
-        stop_flag.set()
-        root.destroy()
+        panel.set_status("音频设备已输出到终端 / Audio devices printed")
 
     root.bind("<Control-m>", toggle_pause)
     root.bind("<Control-l>", show_devices)
