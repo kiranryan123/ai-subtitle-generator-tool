@@ -1,4 +1,9 @@
+param(
+    [switch]$UpdateApiKey
+)
+
 $ErrorActionPreference = "Stop"
+
 Set-Location -LiteralPath $PSScriptRoot
 
 function Get-EnvValue {
@@ -88,10 +93,15 @@ $apiKey = Get-EnvValue -Path $envPath -Name "DEEPSEEK_API_KEY"
 $needsDeepSeekKey = $provider.Trim().ToLowerInvariant() -eq "deepseek"
 $hasPlaceholderKey = (-not $apiKey) -or $apiKey.Contains("deepseek_api_key") -or $apiKey.Contains("你的")
 
-if ($needsDeepSeekKey -and $hasPlaceholderKey) {
+if ($needsDeepSeekKey -and ($hasPlaceholderKey -or $UpdateApiKey)) {
     Write-Host ""
-    Write-Host "需要填写 DeepSeek API Key，才能使用在线 AI 字幕翻译。"
-    Write-Host "DeepSeek API Key is required for online AI subtitle translation."
+    if ($UpdateApiKey -and -not $hasPlaceholderKey) {
+        Write-Host "正在更新 DeepSeek API Key。"
+        Write-Host "Updating DeepSeek API Key."
+    } else {
+        Write-Host "需要填写 DeepSeek API Key，才能使用在线 AI 字幕翻译。"
+        Write-Host "DeepSeek API Key is required for online AI subtitle translation."
+    }
     Write-Host ""
     Write-Host "你可以在这里获取 / Get one here:"
     Write-Host "https://platform.deepseek.com"

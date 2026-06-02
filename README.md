@@ -37,6 +37,13 @@ cd D:\ai-subtitle-win
 
 `run.ps1` installs missing dependencies, creates `.env` if needed, asks for `DEEPSEEK_API_KEY` when it is missing, starts the subtitle app through `pythonw.exe`, and then lets the PowerShell window close.
 
+To replace an existing DeepSeek API key:
+
+```powershell
+cd D:\ai-subtitle-win
+.\run.ps1 -UpdateApiKey
+```
+
 ## Controls
 
 - `Esc`: quit
