@@ -61,6 +61,18 @@ if (-not (Test-Path -LiteralPath ".\.venv\Scripts\python.exe")) {
 
 & .\.venv\Scripts\python.exe -m pip install -r requirements.txt
 
+$currentPid = $PID
+Get-CimInstance Win32_Process -Filter "Name = 'pythonw.exe' OR Name = 'python.exe'" |
+    Where-Object {
+        $_.ProcessId -ne $currentPid -and
+        $_.CommandLine -and
+        $_.CommandLine.Contains("ai_subtitle_win") -and
+        $_.CommandLine.Contains($PSScriptRoot)
+    } |
+    ForEach-Object {
+        Stop-Process -Id $_.ProcessId -Force
+    }
+
 $envPath = Join-Path $PSScriptRoot ".env"
 if (-not (Test-Path -LiteralPath $envPath)) {
     Copy-Item -LiteralPath ".\.env.example" -Destination $envPath

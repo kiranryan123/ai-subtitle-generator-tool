@@ -7,7 +7,7 @@ chunk_seconds = 3.0
 silence_rms = 0.012
 
 [speech]
-model_size = "small"
+model_size = "base"
 language = "auto"
 beam_size = 3
 compute_type = "int8"
