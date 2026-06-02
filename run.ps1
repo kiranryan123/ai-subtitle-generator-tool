@@ -71,8 +71,7 @@ Get-CimInstance Win32_Process -Filter "Name = 'pythonw.exe' OR Name = 'python.ex
     Where-Object {
         $_.ProcessId -ne $currentPid -and
         $_.CommandLine -and
-        $_.CommandLine.Contains("ai_subtitle_win") -and
-        $_.CommandLine.Contains($PSScriptRoot)
+        $_.CommandLine.Contains("ai_subtitle_win")
     } |
     ForEach-Object {
         Stop-Process -Id $_.ProcessId -Force

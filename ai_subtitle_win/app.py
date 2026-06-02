@@ -16,11 +16,11 @@ from .translator import SubtitlePair, build_translator
 def _setup_logging() -> None:
     log_dir = Path.cwd() / "logs"
     log_dir.mkdir(exist_ok=True)
+    handler = logging.FileHandler(log_dir / "app.log", encoding="utf-8")
+    handler.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(message)s"))
     logging.basicConfig(
-        filename=log_dir / "app.log",
         level=logging.INFO,
-        format="%(asctime)s %(levelname)s %(message)s",
-        encoding="utf-8",
+        handlers=[handler],
     )
 
 
